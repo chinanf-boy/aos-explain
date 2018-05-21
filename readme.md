@@ -226,7 +226,9 @@ const init = function init(settings) {
 ```
 
 - [handleScroll](./help.md#handlescroll)
+- [observe](./lib.md#observe)
 
+---
 
 - [options](#options)
 - [refresh](#refresh)
@@ -234,6 +236,8 @@ const init = function init(settings) {
 - [isDisabled](#isdisabled)
 - [export](#export)
 - [others](#others)
+
+---
 
 ### others
 
