@@ -119,7 +119,7 @@ https://github.com/michalsnik/aos#-setup
 #### import
 
 ``` js
-import styles from './../sass/aos.scss';
+import styles from './../sass/aos.scss'; // 被 webpack 插件处理
 
 // Modules & helpers
 import throttle from 'lodash.throttle'; // 一段时间能用一次
@@ -140,23 +140,25 @@ import elements from './helpers/elements';
  * 默认配置
  */
 let options = {
-  offset: 120,
-  delay: 0,
-  easing: 'ease',
-  duration: 400,
-  disable: false,
-  once: false,
-  startEvent: 'DOMContentLoaded',
-  throttleDelay: 99,
-  debounceDelay: 50,
-  disableMutationObserver: false,
+  offset: 120, // 偏移
+  delay: 0, // 动画延迟
+  easing: 'ease', // 动画轨迹
+  duration: 400, // 动画时间
+  disable: false, // 禁用
+  once: false, // 一次？
+  startEvent: 'DOMContentLoaded', // 开始控制
+  throttleDelay: 99, // time
+  debounceDelay: 50, // time
+  disableMutationObserver: false, // 
 };
 
 ```
 
 #### init
 
-- [elements](./help.md#elements)
+- [x] [elements](./help.md#elements)
+
+拿到 __document__ 下 `所有`具有 `data-aos` 属性的`节点数组`
 
 
 ``` js
@@ -188,7 +190,7 @@ const init = function init(settings) {
     // 如果默认的startEvent已经被触发，则初始化AOS
     refresh(true);
   } else if (options.startEvent === 'load') {
-    // 如果启动事件是'加载' - 将侦听器附加到窗口
+    // 如果启动事件是'load' - 将侦听器附加到窗口
     window.addEventListener(options.startEvent, function() {
       refresh(true);
     });
@@ -225,17 +227,24 @@ const init = function init(settings) {
 };
 ```
 
-- [handleScroll](./help.md#handlescroll)
-- [observe](./lib.md#observe)
+- [x] [handleScroll](./help.md#handlescroll)
+
+滚动计算 - 对每个元素 加减 'aos-animate' class 
+
+
+- [x] [observe](./lib.md#observe)
+
+调用 浏览器的观察 对象, 如果 `aos` 的节点改动, 重启
+
 
 ---
 
-- [options](#options)
-- [refresh](#refresh)
-- [disable](#disable)
-- [isDisabled](#isdisabled)
-- [export](#export)
-- [others](#others)
+- [x] [options](#options)
+- [x] [refresh](#refresh)
+- [x] [disable](#disable)
+- [x] [isDisabled](#isdisabled)
+- [x] [export](#export)
+- [x] [others](#others)
 
 ---
 
@@ -258,18 +267,29 @@ const browserNotSupported = document.all && !window.atob;
 
 #### refresh
 
+刷新, 属于对元素们初始化
+
+1. 加class和条件高度: `prepare`
+
+2. 比较窗口和元素高度和动画次数设置: `handleScroll`
+
 ``` js
 /**
  * 重载 AOS
  */
 const refresh = function refresh(initialize = false) {
-  // Allow refresh only when it was first initialized on startEvent
-  if (initialize) initialized = true;
+  // 仅当它在startEvent上首次初始化时才允许刷新
 
-  if (initialized) {
-    // Extend elements objects in $aosElements with their positions
+  if (initialize) // 局部
+   initialized = true; 
+
+// 注意看 initialize 和 initialized 是不一样的两个单词
+
+  if (initialized) { // 全局
+
+    // 扩展元素对象 $aosElements 他们的位置
     $aosElements = prepare($aosElements, options);
-    // Perform scroll event, to refresh view and show/hide elements
+    // 执行滚动事件，刷新视图并显示/隐藏元素
     handleScroll($aosElements, options.once);
 
     return $aosElements;
@@ -282,18 +302,27 @@ const refresh = function refresh(initialize = false) {
   *用新元素创建数组并刷新触发器
  */
 const refreshHard = function refreshHard() {
-  $aosElements = elements();
+  $aosElements = elements(); // 在 从 body 中 找一遍 aos
   refresh();
 };
 
 ```
 
-- [prepare](./help.md#prepare)
+- [x] [prepare](./help.md#prepare)
+
+为每个元素 加 `aos-init` , 和 逐个计算 元素触发动画条件高度
+
+
+- [x] [handleScroll](./help.md#handlescroll)
+
+滚动计算 - 对每个元素 加减 'aos-animate' class 
 
 
 ---
 
 #### disable
+
+禁用 去掉全局缓存内所有的aos属性
 
 ``` js
 /**
@@ -313,6 +342,8 @@ const disable = function() {
 
 #### isDisabled
 
+根据提供的设置检查是否应禁用AOS
+
 ``` js
 /**
  * 根据提供的设置检查是否应禁用AOS
@@ -325,13 +356,18 @@ const isDisabled = function(optionDisable) {
   (typeof optionDisable === 'function' && optionDisable() === true);
 };
 
+// 只有当 全部 false 才是 false
 ```
 
-- [detect](./help.md#detect)
+- [x] [detect](./help.md#detect)
 
+平台设备匹配三大类, `手机-phone`/`移动-mobile`/`平板-tablet`
 
 
 #### export
+
+导出
+
 ``` js
 /**
  * Export Public API

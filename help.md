@@ -6,17 +6,19 @@
 
 `calculateOffset.js`
 
+从 各个元素 自定义设置 优于 全局设置, 计算 每个元素触发条件高度
+
 <details>
 
 ``` js
 /**
- * Calculate offset
- * basing on element's settings like:
+ * 计算偏移量
+ * 基于元素的设置，如：
  * - anchor
  * - offset
  *
  * @param  {Node} el [Dom element]
- * @return {Integer} [Final offset that will be used to trigger animation in good position]
+ * @return {Integer} [将用于触发动画的最终偏移量位置良好]
  */
 
 import getOffset from './../libs/offset';
@@ -29,19 +31,25 @@ const calculateOffset = function (el, optionalOffset) {
     offset: el.getAttribute('data-aos-offset'),
     anchor: el.getAttribute('data-aos-anchor'),
     anchorPlacement: el.getAttribute('data-aos-anchor-placement')
+    // 锚点放置 - 屏幕上元素的哪一个位置应触发动画 default: top-bottom
   };
 
-  if (attrs.offset && !isNaN(attrs.offset)) {
+  if (attrs.offset && !isNaN(attrs.offset)) { // 自身偏移量
     additionalOffset = parseInt(attrs.offset);
   }
 
-  if (attrs.anchor && document.querySelectorAll(attrs.anchor)) {
+  if (attrs.anchor && document.querySelectorAll(attrs.anchor)) { 
+    // 以 哪个元素 作为 自身高度目标
     el = document.querySelectorAll(attrs.anchor)[0];
   }
 
-  elementOffsetTop = getOffset(el).top;
+  elementOffsetTop = getOffset(el).top; // 本身元素位置高度
 
-  switch (attrs.anchorPlacement) {
+  switch (attrs.anchorPlacement) { // 自身高度的加减
+    // 第一个 变量 指的是 元素的位置 top/bottom/center
+    // 第二个 变量  指的是 窗口的位置 top/bottom/center
+    // top-bottom 的意思是
+    // 当 元素的上边 到 窗口 底部 时
     case 'top-bottom':
       // Default offset
       break;
@@ -72,10 +80,11 @@ const calculateOffset = function (el, optionalOffset) {
   }
 
   if (!attrs.anchorPlacement && !attrs.offset && !isNaN(optionalOffset)) {
+    // 元素 自身偏移量的设置级别 优于 全局偏移量
     additionalOffset = optionalOffset;
   }
 
-  return elementOffsetTop + additionalOffset;
+  return elementOffsetTop + additionalOffset; // 触发条件的高度准备好了
 };
 
 export default calculateOffset;
@@ -84,11 +93,17 @@ export default calculateOffset;
 
 - [getOffset](./lib.md#offset)
 
+拿到 元素 离`上`面的绝对值和离`左`面的绝对值
+
+
 </details>
 
 ### detect
 
 `detector.js`
+
+平台设备匹配三大类, 手机/移动/平板
+
 
 <details>
 
@@ -105,6 +120,7 @@ const prefixMobileRe = /1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac
 
 function ua() {
   return navigator.userAgent || navigator.vendor || window.opera || '';
+  // 获取 设备 信息
 }
 
 
@@ -113,15 +129,19 @@ class Detector {
   phone() {
     const a = ua();
     return !!(fullNameRe.test(a) || prefixRe.test(a.substr(0, 4)));
+    // 测试 有没有 匹配手机信息
   }
 
   mobile() {
     const a = ua();
     return !!(fullNameMobileRe.test(a) || prefixMobileRe.test(a.substr(0, 4)));
+    // 测试 有没有 匹配移动信息
+    
   }
 
   tablet() {
     return this.mobile() && !this.phone();
+    // 是移动但不是手机
   }
 };
 
@@ -137,13 +157,15 @@ export default new Detector;
 
 `elements.js`
 
+拿到 __document__ 下 `所有`具有 `data-aos` 属性的`节点数组`
+
 <details>
 
 ``` js
 /**
- * Generate initial array with elements as objects
- * This array will be extended later with elements attributes values
- * like 'position'
+ * 生成元素作为对象的初始数组
+ * 此数组稍后将使用元素属性值进行扩展
+ * 像 'position'
  */
 const createArrayWithElements = function (elements) {
   elements = elements || document.querySelectorAll('[data-aos]');
@@ -160,22 +182,28 @@ export default createArrayWithElements;
 
 `handleScroll.js`
 
+滚动计算 - 对每个元素 加减 'aos-animate' class 
+
 <details>
 
 ``` js
 /**
- * Set or remove aos-animate class
+ * 加减aos-animate class
  * @param {node} el         element
  * @param {int}  top        scrolled distance
  * @param {void} once
  */
 const setState = function (el, top, once) {
-  const attrOnce = el.node.getAttribute('data-aos-once');
+  const attrOnce = el.node.getAttribute('data-aos-once'); 
 
-  if (top > el.position) {
+  // default
+  // typeof attrOne == typeof null
+  // "object" so 👀
+  
+  if (top > el.position) { // 进入 node 范围
     el.node.classList.add('aos-animate');
-  } else if (typeof attrOnce !== 'undefined') {
-    if (attrOnce === 'false' || (!once && attrOnce !== 'true')) {
+  } else if (typeof attrOnce !== 'undefined') { // 离开 node 范围
+    if (attrOnce === 'false' || (!once && attrOnce !== 'true')) { // once 一次动画的不需要移除
       el.node.classList.remove('aos-animate');
     }
   }
@@ -183,7 +211,7 @@ const setState = function (el, top, once) {
 
 
 /**
- * Scroll logic - add or remove 'aos-animate' class on scroll
+ * 滚动计算 - 加减 'aos-animate' class on scroll
  *
  * @param  {array} $elements         array of elements nodes
  * @param  {bool} once               plugin option
@@ -193,8 +221,8 @@ const handleScroll = function ($elements, once) {
   const scrollTop = window.pageYOffset;
   const windowHeight = window.innerHeight;
   /**
-   * Check all registered elements positions
-   * and animate them on scroll
+   * 检查所有注册的元素位置
+   * 和滚动动画
    */
   $elements.forEach((el, i) => {
     setState(el, windowHeight + scrollTop, once);
@@ -208,20 +236,23 @@ export default handleScroll;
 </details>
 
 ### prepare
+
 `prepare.js`
 
+
+为每个元素 加 `aos-init` , 和 逐个计算 元素触发动画条件高度
 
 <details>
 
 ``` js
-/* Clearing variables */
+/* 清除变量 */
 
 import calculateOffset from './calculateOffset';
 
 const prepare = function ($elements, options) {
   $elements.forEach((el, i) => {
-    el.node.classList.add('aos-init');
-    el.position = calculateOffset(el.node, options.offset);
+    el.node.classList.add('aos-init'); // 增加 aos-init class
+    el.position = calculateOffset(el.node, options.offset); // 自定义 元素高度+ 偏移量
   });
   return $elements;
 };
@@ -229,5 +260,10 @@ const prepare = function ($elements, options) {
 export default prepare;
 
 ```
+
+- [x] [calculateOffset](#calculateoffset)
+
+从 各个元素 自定义设置 优于 全局设置, 计算 每个元素触发条件高度
+
 
 </details>
