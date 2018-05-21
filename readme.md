@@ -1,8 +1,7 @@
-# aos
+# aos [![explain](http://llever.com/explain.svg)](https://github.com/chinanf-boy/Source-Explain)
 
 「 滚动 动画 库 」
 
-[![explain](http://llever.com/explain.svg)](https://github.com/chinanf-boy/Source-Explain) << ⬅️ more explain
     
 Explanation
 
@@ -10,7 +9,7 @@ Explanation
 
 [github source](https://github.com/michalsnik/aos)
 
-[中文](./readme.md) | ~~[english](./readme.en.md)~~
+> [中文](./readme.md) | ~~[english](./readme.en.md)~~
 
 ---
 
@@ -21,6 +20,13 @@ Explanation
 ### 🚀 [Demo](http://michalsnik.github.io/aos/)
 
 
+###  AOS 如何 工作
+
+AOS背后的想法很简单：
+
+根据您提供的设置观察所有 `element` 及其位置。然后添加/删除类 `aos-animate`
+
+当然，在实践中，并不总是那么容易，但AOS背后的想法就这么简单。动画的每个方面都由CSS处理。
 
 ---
 
@@ -80,6 +86,32 @@ module.exports = {
 
 </details>
 
+在接触主code前, 我们从 `aos` 的使用方法认清方向
+
+### Use aos
+
+https://github.com/michalsnik/aos#-setup
+
+1. 安装
+
+2. 启动
+
+``` html
+  <script>
+    AOS.init();
+  </script>
+```
+
+3. 设置
+
+``` html
+  <div data-aos="animation_name">
+```
+
+> 重点 `AOS.init();`
+
+---
+
 ### aos.js
 
 `src/js/aos.js`
@@ -90,8 +122,8 @@ module.exports = {
 import styles from './../sass/aos.scss';
 
 // Modules & helpers
-import throttle from 'lodash.throttle';
-import debounce from 'lodash.debounce';
+import throttle from 'lodash.throttle'; // 一段时间能用一次
+import debounce from 'lodash.debounce'; // 中间空一段时间才被用一次
 
 import observe from './libs/observer';
 
@@ -101,21 +133,11 @@ import prepare from './helpers/prepare';
 import elements from './helpers/elements';
 ```
 
-#### 
+#### options
 
 ``` js
 /**
- * Private variables
- */
-let $aosElements = [];
-let initialized = false;
-
-// Detect not supported browsers (<=IE9)
-// http://browserhacks.com/#hack-e71d8692f65334173fee715c222cb805
-const browserNotSupported = document.all && !window.atob;
-
-/**
- * Default options
+ * 默认配置
  */
 let options = {
   offset: 120,
@@ -130,8 +152,111 @@ let options = {
   disableMutationObserver: false,
 };
 
+```
+
+#### init
+
+- [elements](./help.md#elements)
+
+
+``` js
 /**
- * Refresh AOS
+ * 初始化 AOS, 其实作者的注释很清楚的
+ */
+const init = function init(settings) {
+  options = Object.assign(options, settings); // 创建选项，将默认值与用户定义的选项合并
+
+  // 用元素创建初始数组 - > 稍后用prepare（）完成
+  $aosElements = elements();
+
+  /**
+   * 如果设置了选项`disable`，则不要初始化插件
+   * 或者当浏览器不支持
+   */
+  if (isDisabled(options.disable) || browserNotSupported) {
+    return disable();
+  }
+
+  // 将<body>的属性设置为全局设置--css依靠它
+  document.querySelector('body').setAttribute('data-aos-easing', options.easing);
+  document.querySelector('body').setAttribute('data-aos-duration', options.duration);
+  document.querySelector('body').setAttribute('data-aos-delay', options.delay);
+
+  // 将准备元素附加到options.startEvent，
+  if (options.startEvent === 'DOMContentLoaded' &&
+    ['complete', 'interactive'].indexOf(document.readyState) > -1) {
+    // 如果默认的startEvent已经被触发，则初始化AOS
+    refresh(true);
+  } else if (options.startEvent === 'load') {
+    // 如果启动事件是'加载' - 将侦听器附加到窗口
+    window.addEventListener(options.startEvent, function() {
+      refresh(true);
+    });
+  } else {
+    // 收听options.startEvent并初始化AOS
+    document.addEventListener(options.startEvent, function() {
+      refresh(true);
+    });
+  }
+
+  /**
+   * 刷新窗口上的插件大小或方向更改
+   */
+  window.addEventListener('resize', debounce(refresh, options.debounceDelay, true));
+  window.addEventListener('orientationchange', debounce(refresh, options.debounceDelay, true));
+
+  /**
+   * 处理滚动事件以在滚动上动画元素
+   */
+  window.addEventListener('scroll', throttle(() => {
+    handleScroll($aosElements, options.once);
+  }, options.throttleDelay));
+
+  /**
+   * 观察[aos]元素
+   * 如果有东西被AJAX加载
+   * 它会自动刷新插件
+   */
+  if (!options.disableMutationObserver) {
+    observe('[data-aos]', refreshHard);
+  }
+
+  return $aosElements;
+};
+```
+
+- [handleScroll](./help.md#handlescroll)
+
+
+- [options](#options)
+- [refresh](#refresh)
+- [disable](#disable)
+- [isDisabled](#isdisabled)
+- [export](#export)
+- [others](#others)
+
+### others
+
+``` js
+/**
+ * Private variables
+ */
+let $aosElements = [];
+let initialized = false;
+
+// 选出 不支持的浏览器 (<=IE9)
+// http://browserhacks.com/#hack-e71d8692f65334173fee715c222cb805
+const browserNotSupported = document.all && !window.atob;
+
+```
+
+
+
+#### refresh
+
+``` js
+/**
+ * 重载 AOS
  */
 const refresh = function refresh(initialize = false) {
   // Allow refresh only when it was first initialized on startEvent
@@ -147,18 +272,29 @@ const refresh = function refresh(initialize = false) {
   }
 };
 
+
 /**
- * Hard refresh
- * create array with new elements and trigger refresh
+ * 硬刷新
+  *用新元素创建数组并刷新触发器
  */
 const refreshHard = function refreshHard() {
   $aosElements = elements();
   refresh();
 };
 
+```
+
+- [prepare](./help.md#prepare)
+
+
+---
+
+#### disable
+
+``` js
 /**
- * Disable AOS
- * Remove all attributes to reset applied styles
+ * 禁用AOS
+ * 删除所有属性以重置应用样式
  */
 const disable = function() {
   $aosElements.forEach(function(el, i) {
@@ -169,9 +305,13 @@ const disable = function() {
   });
 };
 
+```
 
+#### isDisabled
+
+``` js
 /**
- * Check if AOS should be disabled based on provided setting
+ * 根据提供的设置检查是否应禁用AOS
  */
 const isDisabled = function(optionDisable) {
   return optionDisable === true ||
@@ -181,81 +321,14 @@ const isDisabled = function(optionDisable) {
   (typeof optionDisable === 'function' && optionDisable() === true);
 };
 
-/**
- * Initializing AOS
- * - Create options merging defaults with user defined options
- * - Set attributes on <body> as global setting - css relies on it
- * - Attach preparing elements to options.startEvent,
- *   window resize and orientation change
- * - Attach function that handle scroll and everything connected to it
- *   to window scroll event and fire once document is ready to set initial state
- */
-const init = function init(settings) {
-  options = Object.assign(options, settings);
+```
 
-  // Create initial array with elements -> to be fullfilled later with prepare()
-  $aosElements = elements();
+- [detect](./help.md#detect)
 
-  /**
-   * Don't init plugin if option `disable` is set
-   * or when browser is not supported
-   */
-  if (isDisabled(options.disable) || browserNotSupported) {
-    return disable();
-  }
 
-  /**
-   * Set global settings on body, based on options
-   * so CSS can use it
-   */
-  document.querySelector('body').setAttribute('data-aos-easing', options.easing);
-  document.querySelector('body').setAttribute('data-aos-duration', options.duration);
-  document.querySelector('body').setAttribute('data-aos-delay', options.delay);
 
-  /**
-   * Handle initializing
-   */
-  if (options.startEvent === 'DOMContentLoaded' &&
-    ['complete', 'interactive'].indexOf(document.readyState) > -1) {
-    // Initialize AOS if default startEvent was already fired
-    refresh(true);
-  } else if (options.startEvent === 'load') {
-    // If start event is 'Load' - attach listener to window
-    window.addEventListener(options.startEvent, function() {
-      refresh(true);
-    });
-  } else {
-    // Listen to options.startEvent and initialize AOS
-    document.addEventListener(options.startEvent, function() {
-      refresh(true);
-    });
-  }
-
-  /**
-   * Refresh plugin on window resize or orientation change
-   */
-  window.addEventListener('resize', debounce(refresh, options.debounceDelay, true));
-  window.addEventListener('orientationchange', debounce(refresh, options.debounceDelay, true));
-
-  /**
-   * Handle scroll event to animate elements on scroll
-   */
-  window.addEventListener('scroll', throttle(() => {
-    handleScroll($aosElements, options.once);
-  }, options.throttleDelay));
-
-  /**
-   * Observe [aos] elements
-   * If something is loaded by AJAX
-   * it'll refresh plugin automatically
-   */
-  if (!options.disableMutationObserver) {
-    observe('[data-aos]', refreshHard);
-  }
-
-  return $aosElements;
-};
-
+#### export
+``` js
 /**
  * Export Public API
  */
